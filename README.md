@@ -1,7 +1,7 @@
 # Podcast Transcript Archive
 
 A static, fuzzy-searchable archive of podcast transcripts, built for GitHub
-Pages. No backend, no database — just Markdown files in, a searchable
+Pages. No backend, no database just Markdown files in, a searchable
 website out.
 
 > **Run every command in this README from the project's root folder** (the
@@ -19,7 +19,7 @@ website out.
 - [Pagefind](https://pagefind.app) indexes the generated `/public` folder and
   gives you fast, typo-tolerant (fuzzy) full-text search across every
   transcript, without shipping all the text to the browser up front. This
-  scales comfortably to hundreds of episodes — it only pulls in what a
+  scales comfortably to hundreds of episodes it only pulls in what a
   search actually needs.
 - A GitHub Actions workflow (`.github/workflows/deploy.yml`) runs the build
   and Pagefind indexing automatically on every push to `main`, and deploys
@@ -43,15 +43,15 @@ duration: 45:10
 ```
 
 Notes:
-- `guests: none` if there's no guest — it'll be hidden on the episode page.
-- The `[MM:SS] SPEAKER: text` format is optional per line — any line that
+- `guests: none` if there's no guest it'll be hidden on the episode page.
+- The `[MM:SS] SPEAKER: text` format is optional per line any line that
   doesn't match it is rendered as plain text (useful for intros, show notes,
   or ad breaks pasted into the transcript).
 - Filenames don't matter for display (the `episode` number and `title` in
   the frontmatter control that) but naming them `001-title.md`,
   `002-title.md` etc. keeps the folder easy to scan.
 - 3 sample episodes are included so you can see the format and preview the
-  site immediately — delete them once you've added your own.
+  site immediately delete them once you've added your own.
 
 ## Streaming straight from the feed (low disk footprint)
 
@@ -72,17 +72,17 @@ run repeatedly as new episodes get published -- it'll only process what's
 actually new.
 
 Useful options:
-- `--dry-run` — list what would be processed without downloading or
+- `--dry-run` list what would be processed without downloading or
   transcribing anything. Worth running once first, same as with
   `fetch_rss_episodes.py`.
-- `--limit 5` — only process 5 pending episodes this run, then stop (handy
+- `--limit 5` only process 5 pending episodes this run, then stop (handy
   for testing, or for deliberately working through a big backlog in
   smaller sessions).
-- `--keep-audio` — keep the downloaded audio instead of deleting it after
+- `--keep-audio` keep the downloaded audio instead of deleting it after
   transcribing, if you change your mind about wanting a local archive.
-- `--speaker-map "SPEAKER_00=HOST,SPEAKER_01=GUEST"` — same as the batch
+- `--speaker-map "SPEAKER_00=HOST,SPEAKER_01=GUEST"` same as the batch
   script, rename diarization labels once you know who's who.
-- `--model`, `--audio-dir`, `--transcript-dir` — override any default path.
+- `--model`, `--audio-dir`, `--transcript-dir` override any default path.
 
 If an episode fails partway through (a bad download, a transcription
 error, etc), its audio is kept on disk for debugging rather than silently
@@ -208,7 +208,7 @@ pip3 install pyannote.audio --break-system-packages
 Then:
 1. Create a free Hugging Face account: https://huggingface.co/join
 2. Visit and accept the terms on both of these model pages (just click
-   "Agree" while logged in — no download needed):
+   "Agree" while logged in no download needed):
    - https://huggingface.co/pyannote/speaker-diarization-3.1
    - https://huggingface.co/pyannote/segmentation-3.0
 3. Create a read-access token: https://huggingface.co/settings/tokens
@@ -223,7 +223,7 @@ export HF_TOKEN=hf_xxxxxxxx
 ```
 
 Diarization is slower than transcription on CPU, so budget extra time per
-episode. Speakers come out labeled `SPEAKER_00`, `SPEAKER_01`, etc — you
+episode. Speakers come out labeled `SPEAKER_00`, `SPEAKER_01`, etc you
 won't know which number is which person until you check a transcript. Once
 you do, set `SPEAKER_MAP` to rename them for the rest of the batch:
 
@@ -234,7 +234,7 @@ export SPEAKER_MAP="SPEAKER_00=HOST,SPEAKER_01=GUEST"
 
 (Since a fresh guest each episode may not always map to the same
 `SPEAKER_NN`, spot-check a few files after a batch run and rename in the
-`.md` files directly if needed — they're plain text.)
+`.md` files directly if needed they're plain text.)
 
 After transcribing, double-check the frontmatter (especially `date` and
 `guests`, which the script can't infer) and spot-check a few transcripts —
@@ -277,7 +277,7 @@ public/                  generated output (git-ignored; rebuilt each run)
 
 - **Site title**: edit `site_title="The Show"` in `scripts/build_site.py`.
 - **Design**: everything lives in `assets/style.css` as CSS custom
-  properties at the top of the file (colors, fonts) — change those and the
+  properties at the top of the file (colors, fonts) change those and the
   whole site follows.
 - **Search behavior**: Pagefind options are set in the `<script>` block at
   the bottom of the generated `index.html` template inside
