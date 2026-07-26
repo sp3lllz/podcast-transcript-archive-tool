@@ -1,0 +1,240 @@
+/* ---------------------------------------------------------
+   Token system
+   Concept: a broadcast engineer's transcript ledger — the
+   feel of a reel-to-reel tape log, not a modern SaaS page.
+--------------------------------------------------------- */
+:root {
+  --bg: #14171c;
+  --bg-raised: #1c2028;
+  --line: #2a2f38;
+  --text: #e8e6df;
+  --text-dim: #9a9ea6;
+  --accent: #e8a33d;   /* VU-meter amber */
+  --accent-2: #4fa8a0; /* tape-reel teal */
+
+  --font-display: "Archivo Expanded", "Arial Narrow", sans-serif;
+  --font-body: "Source Serif 4", "Georgia", serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+a { color: var(--accent-2); }
+a:focus-visible, button:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* -------------------- Hero / homepage -------------------- */
+.hero { text-align: left; margin-bottom: 8px; }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+  color: var(--accent);
+  margin: 0 0 10px;
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 44px;
+  letter-spacing: 0.01em;
+  margin: 0 0 12px;
+  color: var(--text);
+}
+
+.hero-sub {
+  color: var(--text-dim);
+  margin: 0 0 28px;
+  max-width: 52ch;
+}
+
+/* Waveform divider: the page's signature element */
+.waveform-rule {
+  height: 18px;
+  margin: 28px 0 32px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--line) 0px, var(--line) 2px,
+    transparent 2px, transparent 6px
+  );
+  background-size: 100% 2px;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+.waveform-rule::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent-2), var(--accent-2)),
+    linear-gradient(var(--line), var(--line)),
+    linear-gradient(var(--accent-2), var(--accent-2)),
+    linear-gradient(var(--accent), var(--accent));
+  background-repeat: no-repeat;
+  background-size: 2px 100%, 2px 60%, 2px 90%, 2px 45%, 2px 75%;
+  background-position: 20% center, 32% center, 50% center, 68% center, 80% center;
+  opacity: 0.9;
+}
+
+/* -------------------- Ledger (episode list) -------------------- */
+.ledger { list-style: none; margin: 0; padding: 0; }
+
+.ledger-row + .ledger-row { border-top: 1px solid var(--line); }
+
+.ledger-row a {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 4px;
+  text-decoration: none;
+  color: var(--text);
+  transition: background-color 0.15s ease;
+}
+.ledger-row a:hover,
+.ledger-row a:focus-visible {
+  background: var(--bg-raised);
+}
+
+.ep-number {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px 6px;
+  text-align: center;
+  justify-self: start;
+}
+
+.ledger-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+
+.ledger-date {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* -------------------- Episode page -------------------- */
+.back {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  margin-bottom: 24px;
+  text-decoration: none;
+  color: var(--text-dim);
+}
+.back:hover { color: var(--accent-2); }
+
+.ep-header {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.ep-header .ep-number {
+  font-size: 20px;
+  padding: 8px 0;
+  width: 72px;
+}
+
+.ep-meta h1 {
+  font-family: var(--font-display);
+  font-size: 30px;
+  margin: 0 0 6px;
+}
+
+.meta-line {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.transcript .line {
+  display: grid;
+  grid-template-columns: 60px 110px 1fr;
+  gap: 12px;
+  margin: 0 0 14px;
+  align-items: baseline;
+}
+
+.transcript .line .ts {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-2);
+  padding-top: 3px;
+}
+
+.transcript .line .speaker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  padding-top: 3px;
+}
+
+.transcript .line .text {
+  color: var(--text);
+}
+
+.transcript .line.plain {
+  grid-template-columns: 1fr;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* -------------------- Search box (Pagefind UI overrides) -------------------- */
+#search {
+  --pagefind-ui-primary: var(--accent);
+  --pagefind-ui-text: var(--text);
+  --pagefind-ui-background: var(--bg-raised);
+  --pagefind-ui-border: var(--line);
+  --pagefind-ui-tag: var(--bg-raised);
+  --pagefind-ui-border-width: 1px;
+  --pagefind-ui-border-radius: 4px;
+  --pagefind-ui-font: var(--font-body);
+  max-width: 100%;
+}
+
+/* -------------------- Small screens -------------------- */
+@media (max-width: 520px) {
+  .hero h1 { font-size: 32px; }
+  .transcript .line { grid-template-columns: 1fr; gap: 2px; }
+  .transcript .line .ts,
+  .transcript .line .speaker { padding-top: 0; }
+  .ep-header { grid-template-columns: 56px 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
