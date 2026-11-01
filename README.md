@@ -10,19 +10,31 @@ No backend, no database: Markdown files in, a static searchable site out.
 
 ## Quick start
 
-### 1. Fork and switch on GitHub Pages
+### 1. Create your own copy and switch on GitHub Pages
 
-1. Click **Fork** on GitHub.
-2. In your fork, open the **Actions** tab and click **"I understand my
-   workflows, go ahead and enable them"** (GitHub disables Actions on forks
-   by default).
-3. Go to **Settings → Pages** and set **Source** to **GitHub Actions**.
+1. Click **Use this template → Create a new repository** at the top of this
+   page. Give it a name (e.g. `my-podcast-transcripts`); it can be public or
+   private (private Pages sites need a paid GitHub plan).
+2. In your new repository, go to **Settings → Pages** and set **Source** to
+   **GitHub Actions**.
+
+The first "Build and deploy site" run in your new repository may fail
+because Pages wasn't switched on yet. That's expected: the next push
+deploys normally.
+
+Using the GitHub CLI instead? This does step 1 and clones it in one go:
+
+```bash
+gh repo create my-podcast-transcripts --template sp3lllz/podcast-transcript-archive-tool --public --clone
+```
 
 ### 2. Clone it and point it at your podcast
 
+Skip the clone if you used the `gh` command above.
+
 ```bash
-git clone git@github.com:YOUR-USERNAME/podcast-transcript-archive-tool.git
-cd podcast-transcript-archive-tool
+git clone git@github.com:YOUR-USERNAME/YOUR-REPO.git
+cd YOUR-REPO
 ```
 
 Edit `site.config.json`:
@@ -81,7 +93,7 @@ make transcribe
 For each episode in the feed that isn't in the archive yet, this downloads
 the audio, transcribes it, writes `transcripts/NNN-episode-title.md`,
 **commits and pushes it**, deletes the audio, and moves on. Your site at
-`https://YOUR-USERNAME.github.io/podcast-transcript-archive-tool/` updates a
+`https://YOUR-USERNAME.github.io/YOUR-REPO/` updates a
 minute or two after each push.
 
 - Episode `001` is the oldest episode; titles and release dates come from
@@ -207,6 +219,27 @@ scripts/build_site.py            generate the static site into public/
 All scripts resolve paths from the project root, so you can run them from
 any folder. Without `make`, use the scripts directly, e.g.
 `python3 scripts/stream_transcribe.py --help`.
+
+## Getting updates to the tool
+
+Repositories made from a template don't receive later changes
+automatically. To pull in improvements to the scripts, site design or
+workflow, run this once in your repository:
+
+```bash
+git remote add upstream https://github.com/sp3lllz/podcast-transcript-archive-tool.git
+```
+
+Then, whenever you want the latest version:
+
+```bash
+git fetch upstream
+git merge upstream/main --allow-unrelated-histories
+```
+
+`--allow-unrelated-histories` is only needed the first time. If
+`site.config.json` or `assets/style.css` conflict, keep your own version;
+your transcripts are never touched.
 
 ## Customizing
 
