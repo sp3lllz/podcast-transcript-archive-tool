@@ -1,0 +1,3 @@
+# Only needed for optional speaker diarization (who said what).
+# Everything else in this project uses the Python standard library.
+pyannote.audio>=3.1

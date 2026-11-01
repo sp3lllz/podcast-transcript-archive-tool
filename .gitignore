@@ -1,0 +1,18 @@
+# Generated site (rebuilt by GitHub Actions)
+public/
+
+# Downloaded audio and intermediate files -- large, never commit these
+audio/
+*.wav
+*.srt
+*.part
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

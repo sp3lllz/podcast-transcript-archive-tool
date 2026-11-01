@@ -1,0 +1,10 @@
+{
+  "title": "The Show",
+  "tagline": "Every episode, fully transcribed and searchable.",
+  "podcast_url": "",
+  "feed_url": "",
+  "whisper_model": "~/whisper-models/ggml-medium.en.bin",
+  "default_speaker": "SPEAKER",
+  "speaker_map": "",
+  "auto_push": true
+}

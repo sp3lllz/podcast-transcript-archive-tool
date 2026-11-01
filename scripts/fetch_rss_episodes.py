@@ -1,49 +1,49 @@
 #!/usr/bin/env python3
 """
-Downloads episode audio straight from a podcast's RSS feed into the audio
-folder, named to match the numbering convention the rest of this pipeline
-expects (NNN-episode-title.ext).
+Downloads episode audio straight from a podcast's RSS feed into audio/,
+named to match the numbering convention the rest of this pipeline expects
+(NNN-episode-title.ext). Each download also gets a small NNN-....json
+sidecar with the episode's real title and release date, which the
+transcription step uses for the transcript's frontmatter.
 
-Skips any episode whose target file already exists, so it's safe to re-run
-whenever the feed publishes a new episode -- it'll only fetch what's new.
+Skips any episode you already have (audio OR transcript, matched by title),
+so it's safe to re-run whenever the feed publishes a new episode.
 
 Usage:
+  python3 scripts/fetch_rss_episodes.py                 # uses feed_url from site.config.json
   python3 scripts/fetch_rss_episodes.py "https://example.com/feed.xml"
 
 Uses only the Python standard library -- no extra pip installs needed.
 """
 import argparse
 import difflib
-import re
+import json
+import shutil
 import sys
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-# Defaults are relative to the project root -- run this from the
-# project's root folder (e.g. `python3 scripts/fetch_rss_episodes.py ...`).
-DEFAULT_AUDIO_DIR = Path("audio")
-DEFAULT_TRANSCRIPT_DIR = Path("transcripts")
-AUDIO_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg", ".flac"}
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from common import (  # noqa: E402
+    AUDIO_DIR,
+    AUDIO_EXTENSIONS,
+    TRANSCRIPT_DIR,
+    load_config,
+    normalize_date,
+    sidecar_path,
+    slugify,
+    strip_number_prefix,
+)
 
-def slugify(text: str) -> str:
-    text = text.lower()
-    text = re.sub(r"[^a-z0-9]+", "-", text).strip("-")
-    return text or "untitled"
-
-
-def strip_number_prefix(stem: str) -> str:
-    """Strips a leading '001-', '12_', '3.', etc. from a filename stem."""
-    m = re.match(r"^0*\d+[-_. ]+(.+)$", stem)
-    return m.group(1) if m else stem
+USER_AGENT = "Mozilla/5.0 (podcast-transcript-archive)"
 
 
 def build_existing_title_index(audio_dir: Path, transcript_dir: Path = None):
     """Maps a slugified, number-stripped title -> a filename it came from,
     scanning BOTH the audio folder and the transcripts folder. A transcript
-    counts as "already have this episode" even if its original audio file
-    isn't around anymore (renamed, moved, cleaned up, etc)."""
+    counts as "already have this episode" even if its audio is gone."""
     index = {}
 
     if audio_dir.exists():
@@ -74,8 +74,16 @@ def find_existing_match(slug: str, existing_index: dict, threshold: float = 0.82
     return None
 
 
+def resolve_feed_url(cli_value, config) -> str:
+    url = cli_value or config.get("feed_url", "")
+    if not url:
+        sys.exit("No feed URL given. Pass one on the command line or set "
+                 "\"feed_url\" in site.config.json.")
+    return url
+
+
 def fetch_feed(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read()
 
@@ -97,85 +105,94 @@ def parse_items(xml_bytes: bytes):
         pubdate = pubdate_el.text.strip() if pubdate_el is not None and pubdate_el.text else ""
 
         if audio_url:
-            parsed.append({"title": title, "url": audio_url, "pubdate": pubdate})
+            parsed.append({"title": title, "url": audio_url, "date": normalize_date(pubdate)})
     return parsed
+
+
+def audio_extension(url: str) -> str:
+    ext = Path(url.split("?")[0]).suffix.lower()
+    return ext if ext in AUDIO_EXTENSIONS else ".mp3"
+
+
+def download(url: str, dest: Path):
+    """Streams to a .part file first, so an interrupted download never
+    looks like a finished episode on the next run."""
+    tmp = dest.with_name(dest.name + ".part")
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=180) as resp, open(tmp, "wb") as f:
+        shutil.copyfileobj(resp, f)
+    tmp.replace(dest)
+
+
+def write_sidecar(audio_path: Path, episode: int, item: dict):
+    sidecar_path(audio_path).write_text(
+        json.dumps({"episode": episode, "title": item["title"], "date": item["date"]}, indent=2),
+        encoding="utf-8",
+    )
+
+
+def load_feed_items(feed_url: str, newest_first: bool):
+    print(f"Fetching feed: {feed_url}")
+    try:
+        items = parse_items(fetch_feed(feed_url))
+    except ET.ParseError as e:
+        sys.exit(f"Failed to parse feed XML: {e}")
+    except Exception as e:
+        sys.exit(f"Failed to fetch feed: {e}")
+    if not items:
+        sys.exit("No episodes with audio enclosures found in this feed.")
+    if not newest_first:
+        items = list(reversed(items))
+    print(f"Found {len(items)} episode(s) in feed.")
+    return items
+
+
+def add_common_feed_args(parser):
+    parser.add_argument("feed_url", nargs="?",
+                        help="RSS feed URL (defaults to feed_url in site.config.json)")
+    parser.add_argument("--audio-dir", default=str(AUDIO_DIR))
+    parser.add_argument("--transcript-dir", default=str(TRANSCRIPT_DIR))
+    parser.add_argument(
+        "--newest-first", action="store_true",
+        help="Keep the feed's native newest-first order instead of reversing "
+             "it. By default episode 001 = the oldest/first-released episode.",
+    )
+    parser.add_argument(
+        "--match-threshold", type=float, default=0.82,
+        help="Similarity threshold (0-1) for treating a feed title as matching "
+             "an existing file. Lower catches more dupes but risks false positives.",
+    )
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Show what would happen without downloading anything.")
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("feed_url")
-    parser.add_argument("--audio-dir", default=str(DEFAULT_AUDIO_DIR))
-    parser.add_argument("--transcript-dir", default=str(DEFAULT_TRANSCRIPT_DIR))
-    parser.add_argument(
-        "--newest-first",
-        action="store_true",
-        help="Keep the feed's native newest-first order instead of "
-             "reversing it. By default episodes are reversed so episode "
-             "001 = the oldest/first-released episode.",
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be downloaded/skipped without downloading anything.",
-    )
-    parser.add_argument(
-        "--match-threshold",
-        type=float,
-        default=0.82,
-        help="Similarity threshold (0-1) for treating a feed title as matching "
-             "an existing file when it's not an exact or substring match. "
-             "Lower catches more potential dupes but risks false positives.",
-    )
+    add_common_feed_args(parser)
     args = parser.parse_args()
 
+    feed_url = resolve_feed_url(args.feed_url, load_config())
     audio_dir = Path(args.audio_dir)
     audio_dir.mkdir(parents=True, exist_ok=True)
     transcript_dir = Path(args.transcript_dir)
 
-    print(f"Fetching feed: {args.feed_url}")
-    try:
-        xml_bytes = fetch_feed(args.feed_url)
-    except Exception as e:
-        print(f"Failed to fetch feed: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    try:
-        items = parse_items(xml_bytes)
-    except ET.ParseError as e:
-        print(f"Failed to parse feed XML: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    if not items:
-        print("No episodes with audio enclosures found in this feed.", file=sys.stderr)
-        sys.exit(1)
-
-    if not args.newest_first:
-        items = list(reversed(items))
-
-    print(f"Found {len(items)} episode(s) in feed.")
+    items = load_feed_items(feed_url, args.newest_first)
 
     existing_index = build_existing_title_index(audio_dir, transcript_dir)
     audio_count = sum(1 for v in existing_index.values() if not v.startswith("transcript: "))
-    transcript_count = len(existing_index) - audio_count
     print(
         f"Found {audio_count} existing audio file(s) in {audio_dir} "
-        f"and {transcript_count} existing transcript(s) in {transcript_dir}"
+        f"and {len(existing_index) - audio_count} existing transcript(s) in {transcript_dir}"
     )
 
     downloaded, skipped, failed = 0, 0, 0
     for i, item in enumerate(items, start=1):
         slug = slugify(item["title"])
-        ext = Path(item["url"].split("?")[0]).suffix or ".mp3"
-        filename = f"{i:03d}-{slug}{ext}"
+        filename = f"{i:03d}-{slug}{audio_extension(item['url'])}"
 
         match = find_existing_match(slug, existing_index, args.match_threshold)
         if match:
             print(f"  [{i}/{len(items)}] Skip: '{item['title']}' matches existing file '{match}'")
-            skipped += 1
-            continue
-
-        target = audio_dir / filename
-        if target.exists():
             skipped += 1
             continue
 
@@ -184,12 +201,11 @@ def main():
             downloaded += 1
             continue
 
+        target = audio_dir / filename
         print(f"  [{i}/{len(items)}] Downloading: {filename}")
         try:
-            req = urllib.request.Request(item["url"], headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=180) as resp:
-                data = resp.read()
-            target.write_bytes(data)
+            download(item["url"], target)
+            write_sidecar(target, i, item)
             downloaded += 1
             # Register it immediately so later items in this same feed
             # can't accidentally re-match/duplicate against it.
